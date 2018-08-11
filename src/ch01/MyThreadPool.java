@@ -13,15 +13,7 @@ public class MyThreadPool extends ThreadPoolExecutor
 	private ReentrantLock pause_lock = new ReentrantLock();    
 	private Condition unpaused = pause_lock.newCondition();        
 	public MyThreadPool(){      
-		super(pool_size,       
-				// core pool size             
-				pool_size,       
-				// maximum pool size           
-				0L,             
-				// keep-alive time for idle thread        
-				TimeUnit.SECONDS, 
-				// time unit for keep-alive setting       
-				new LinkedBlockingQueue<Runnable>(pool_size)); 
+		super(pool_size,pool_size,0L,TimeUnit.SECONDS,new LinkedBlockingQueue<Runnable>(pool_size)); 
 	}
 
 	   

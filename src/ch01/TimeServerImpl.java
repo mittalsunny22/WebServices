@@ -6,15 +6,18 @@ import java.util.concurrent.TimeUnit;
 
 import javax.jws.WebService;
 
-/** *  The @WebService property endpointInterface links the *  SIB (this class) to the SEI (ch01.TimeServer). *  Note that the method implementations are not annotated *  as @WebMethods. */ 
+/** *  The @WebService property endpointInterface links the 
+ * * SIB (this class) to the SEI (ch01.TimeServer). 
+ * *  Note that the method implementations are not annotated as @WebMethods. 
+ * */ 
 
 @WebService(endpointInterface = "ch01.TimeServers") 
 public class TimeServerImpl implements TimeServers {
 
 	public String getTimeAsString()
-	{ 
+	{
 		return new Date().toString(); 
-	}    
+	}     
 
 	public long getTimeAsElapsed() 
 	{ 

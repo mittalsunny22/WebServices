@@ -11,6 +11,8 @@ public class TimeServerPublisher_SingleThread {
 		// 1st argument is the publication URL      
 		// 2nd argument is an SIB instance      
 		
-		Endpoint.publish("http://localhost/7676", new TimeServerImpl()); 
+		Endpoint.publish("http://localhost:7676/Web-service", new TimeServerImpl()); 
+		
+		System.out.println("Service Publish");
 	}
 }
