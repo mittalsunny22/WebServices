@@ -12,7 +12,7 @@ public class TestClient {
 
 	public static void main(String[] args) throws MalformedURLException {
 
-		URL url = new URL("http://localhost/8089?wsdl");
+		URL url = new URL("http://localhost:7676/Web-service?wsdl");
 		// Qualified name of the service:       
 		//   1st arg is the service URI      
 		//   2nd is the service name published in the WSDL       
@@ -33,11 +33,10 @@ public class TestClient {
 		
 		System.out.println(eif.getTimeAsElapsed());
 		System.out.println(eif.getTimeAsString());
-		System.out.println(eif.getTimeAsCalender());
+//		System.out.println(eif.getTimeAsCalender());
 		
 		Calendar  calendar = Calendar.getInstance();
 		calendar.set(Calendar.DAY_OF_YEAR, 5);
 		System.out.println(eif.getTimeDiffereceWithCurrentDate(calendar));
-
 	}
 }
