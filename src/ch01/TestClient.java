@@ -10,7 +10,7 @@ import javax.xml.ws.Service;
 
 public class TestClient {
 
-	public static void main(String[] args) throws MalformedURLException {
+	public static void main(String[] args) throws MalformedURLException {  
 
 		// URL updated
 		URL url = new URL("http://localhost:7676/Web-service?wsdl");
