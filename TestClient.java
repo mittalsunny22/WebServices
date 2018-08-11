@@ -12,6 +12,7 @@ public class TestClient {
 
 	public static void main(String[] args) throws MalformedURLException {
 
+		// URL updated
 		URL url = new URL("http://localhost:7676/Web-service?wsdl");
 		// Qualified name of the service:       
 		//   1st arg is the service URI      
