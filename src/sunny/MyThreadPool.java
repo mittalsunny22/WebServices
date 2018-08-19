@@ -1,4 +1,4 @@
-package ch01;
+package sunny;
 
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;

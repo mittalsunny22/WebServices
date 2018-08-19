@@ -1,4 +1,4 @@
-package ch01;
+package sunny;
 
 import javax.xml.ws.Endpoint;
 
@@ -24,10 +24,8 @@ public class TimeServerPublisher_MultiThread {
 	}
 
 	private void publish() 
-	{     
-		int port = 8090;      
-		String url = "http://localhost/" + port;        
-		endpoint.publish(url);        
-		System.out.println("Publishing TimeServer on " + url);  
+	{            
+		endpoint.publish(WSConstants.ENDPOINT_URL.value());        
+		System.out.println("Publishing TimeServer on " + WSConstants.ENDPOINT_URL.value());  
 	} 
 }   
