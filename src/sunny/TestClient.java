@@ -1,5 +1,7 @@
 package sunny;
 
+import java.io.FileOutputStream;
+import java.io.ObjectOutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Calendar;
@@ -12,7 +14,6 @@ public class TestClient {
 
 	public static void main(String[] args) throws Exception {  
 		
-		System.out.println("here");
 		
 		// URL updated
 		URL url = null;
@@ -22,6 +23,7 @@ public class TestClient {
 			System.out.println("Excepton :: "+ e1.getMessage());
 		}
 		
+		System.out.println("Service Invoked at "+ WSConstants.ENDPOINT_URL.value());
 		// Qualified name of the service:       
 		//   1st arg is the service URI      
 		//   2nd is the service name published in the WSDL       
@@ -31,15 +33,34 @@ public class TestClient {
 		// Extract the endpoint interface, the service "port".       
 		TimeServers eif = service.getPort(TimeServers.class);
 		
+//		writeObject(eif);
+		
 		System.out.println("Time in milliseconds ::"+eif.getTimeAsElapsed());
 		System.out.println("Time in String ::"+eif.getTimeAsString());
-		System.out.println(eif.getTimeAsCalender());
+		System.out.println(eif.getTimeAsCalender().getTime());
 		
 		Calendar  calendar = Calendar.getInstance();
-		calendar.set(Calendar.DAY_OF_YEAR, 5);
+		calendar.set(Calendar.DAY_OF_WEEK, 2);
+		calendar.set(Calendar.MINUTE, 25);
 		System.out.println("Time Diff ::"+eif.getTimeDiffereceWithCurrentDate(calendar));
-		System.out.print("Enter the value to calculate Fab value >> ");
+		System.out.print("Enter the value to get next nth Fabonacci value >> ");
 		int n = new Scanner(System.in).nextInt();
 		System.out.println("Fab series for "+n +" is :: "+eif.countRabbits(n));
+		}
+
+	private static void writeObject(TimeServers eif) {
+
+		try {
+			String cwd = System.getProperty ("user.dir");
+			String sep = System.getProperty ("file.separator");
+			FileOutputStream fileOut = new FileOutputStream(cwd+sep+"TestClient.ser");
+			ObjectOutputStream out = new ObjectOutputStream(fileOut);
+			out.writeObject(eif);
+			out.close();
+			fileOut.close();
+		}
+		catch (Exception e) {
+			// TODO: handle exception
+		}
 		}
 }

@@ -1,12 +1,8 @@
 package sunny;
 
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
 import javax.jws.WebService;
 
 /** *  
@@ -27,9 +23,6 @@ public class TimeServerImpl implements TimeServers {
 
 	public int countRabbits(int n) throws Exception  {    
 		
-		Map<Integer, Integer> cache = Collections.synchronizedMap(new HashMap<Integer, Integer>());
-		
-
 		// Throw a fault if n is negative.     
 		if (n < 0) 
 			throw new Exception("Neg. arg. not allowed."+ n + " < 0");
@@ -45,7 +38,6 @@ public class TimeServerImpl implements TimeServers {
 				fib += prev;
 				prev = temp;
 			}
-			cache.put(n, fib); // cache value for later lookup			
 			return fib; 
 		}
 	}
