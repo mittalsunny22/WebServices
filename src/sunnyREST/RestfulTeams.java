@@ -2,18 +2,28 @@ package sunnyREST;
 
 import java.beans.XMLDecoder;
 import java.beans.XMLEncoder;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import javax.annotation.Resource;
 import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMResult;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.ws.BindingType;
 import javax.xml.ws.Provider;
@@ -23,6 +33,12 @@ import javax.xml.ws.WebServiceProvider;
 import javax.xml.ws.handler.MessageContext;
 import javax.xml.ws.http.HTTPBinding;
 import javax.xml.ws.http.HTTPException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+
+import org.w3c.dom.NodeList;
 
 //The class below is a WebServiceProvider rather than the more usual SOAP-based WebService. 
 //The service implements the generic Provider interface rather than a customized SEI with designated @WebMethods. 
@@ -44,6 +60,7 @@ public class RestfulTeams implements Provider<Source>
 	private List<Team> teams;           // serialized/deserialized    
 	private byte[ ] team_bytes;         // from the persistence file
 	private static final String file_path = "E:\\AlpsTeam.ser";
+	private static final String post_put_key = "Cargo";
 
 
 	public RestfulTeams() {
@@ -66,12 +83,177 @@ public class RestfulTeams implements Provider<Source>
 		System.out.println("Request type :: " + http_verb);
 
 		// Act on the verb. To begin, only GET requests accepted.        
-		if (http_verb.equals("GET")) 
-			return doGet(msg_ctx);
+		if (http_verb.equals("GET")) return doGet(msg_ctx);
+		if (http_verb.equals("PUT")) return doPut(msg_ctx);
+		if (http_verb.equals("POST")) return doPost(msg_ctx);
+		if (http_verb.equals("DELETE")) return doDelete(msg_ctx);
 
 		else throw new HTTPException(405); // method not allowed    
 	}
 
+	private Source doDelete(MessageContext msg_ctx) {
+		 String query_string = (String) msg_ctx.get(MessageContext.QUERY_STRING);
+		 
+	        // Disallow the deletion of all teams at once.
+		 if (query_string == null)
+			 throw new HTTPException(403);     // illegal operation
+		 else {            
+			 String name = get_value_from_qs("name", query_string);
+			 if (!team_map.containsKey(name))
+				 throw new HTTPException(404); // not found
+		 
+	            // Remove team from Map and List, serialize to file.
+			 Team team = team_map.get(name);
+			 teams.remove(team);
+			 team_map.remove(name);
+			 serialize();
+			 
+	            // Send response.
+			 return response_to_client(name + " deleted.");
+			 } 
+		 }
+	
+	private Source doPost(MessageContext msg_ctx) {
+		
+		 @SuppressWarnings("unchecked")
+		Map<String, List<String>> request = (Map<String, List<String>>) msg_ctx.get(MessageContext.HTTP_REQUEST_HEADERS);
+		 
+	        List<String> cargo = request.get(post_put_key); 
+	        
+	        if (cargo == null) throw new HTTPException(400); // bad request
+	        
+	        String xml = "";
+	        for (String next : cargo)
+	        {
+	        	xml += next.trim();
+	        	
+	        	System.out.println(xml);
+	        	
+	        }
+	        ByteArrayInputStream xml_stream = new ByteArrayInputStream(xml.getBytes());
+	        String team_name = null;
+
+	        try {            
+	        	
+	        	// Set up the XPath object to search for the XML elements.
+	        	DOMResult dom = new DOMResult();
+	        	Transformer trans = TransformerFactory.newInstance().newTransformer();
+	        	trans.transform(new StreamSource(xml_stream), dom);
+	        	URI ns_URI = new URI("createTeam");
+	            XPathFactory xpf = XPathFactory.newInstance();
+	            XPath xp = xpf.newXPath();
+	            xp.setNamespaceContext(new NSResolver("", ns_URI.toString()));
+	            team_name = xp.evaluate("/createTeam/teamName", dom.getNode());
+	            
+	            if (team_map.containsKey(team_name))
+	            	throw new HTTPException(400); // bad request
+	            
+	            List<Employee> team_employees = new ArrayList<Employee>();
+	            
+	            NodeList employees = (NodeList)xp.evaluate("//employee",dom.getNode(),XPathConstants.NODESET);
+
+	            System.out.println("Length :: " + employees.getLength());
+
+	            for (int i = 1; i <= employees.getLength(); i++) {
+	            	
+	            	String name = xp.evaluate("//employee/name", dom.getNode());            	
+	            	System.out.println("Name :: " + name);
+	            	
+	            	String emailAddress = xp.evaluate("//employee/emailAddress", dom.getNode());
+	            	System.out.println("Email ID :: " + emailAddress);
+	            	
+	            	Employee employee = new Employee(name, emailAddress);
+	            	team_employees.add(employee);
+	            	}
+	            
+	            // Add new team to the in-memory map and save List to file.
+	            Team t = new Team(team_name, team_employees);
+	            team_map.put(team_name, t);
+	            teams.add(t);
+	            serialize();
+	            }
+	        catch(URISyntaxException e) {
+	        	System.err.println(e.getMessage());
+	        	throw new HTTPException(500);   // internal server error        
+	        	}
+	        catch(TransformerConfigurationException e) {
+	        	System.err.println(e.getMessage());
+	        	throw new HTTPException(500);   // internal server error        
+	        	}        
+	        catch(TransformerException e) {
+	        	System.err.println(e.getMessage());
+	        	throw new HTTPException(500);   // internal server error
+	        	}
+	        catch(XPathExpressionException e) {
+	        	System.err.println(e.getMessage());
+	        	throw new HTTPException(400);   // bad request
+	        	}
+	            
+	// Send a confirmation to requester.
+	return response_to_client("Team " + team_name + " created.");
+	}
+
+	private Source response_to_client(String msg) {
+		
+		 /*HttpResponse response = new HttpResponse();
+		 response.setResponse(msg);*/
+		 ByteArrayInputStream stream = encode_to_stream(msg);
+		 return new StreamSource(stream); 
+	}
+	
+	 private void serialize() {
+		 try {
+			 BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file_path));
+			 
+			 XMLEncoder enc = new XMLEncoder(out);
+			 enc.writeObject(teams);
+			 enc.close();
+			 out.close();
+			 }
+		 catch(IOException e) { System.err.println(e); }    
+		 }
+	 
+	private Source doPut(MessageContext msg_ctx) {
+		 // Parse the query string. 
+		String query_string = (String) msg_ctx.get(MessageContext.QUERY_STRING);
+		String name = null;
+		String new_name = null;
+		
+        // Get all teams.
+		if (query_string == null)
+			throw new HTTPException(403); // illegal operation
+		
+		// Get a named team.
+		else {            
+			// Split query string into name= and new_name= sections
+			String[ ] parts = query_string.split("&");
+			
+			if (parts[0] == null || parts[1] == null)
+				throw new HTTPException(403);
+			
+            name = get_value_from_qs("name", parts[0]);
+            new_name = get_value_from_qs("new_name", parts[1]);
+            
+            if (name == null || new_name == null)
+            	throw new HTTPException(403);
+            
+            Team team = team_map.get(name);
+            if (team == null)
+            	throw new HTTPException(404);
+            
+            team.setName(new_name);
+            team_map.put(new_name, team);
+
+            /*
+             * If we want to remove data to get using old name then un comment below part
+            teams.remove(team);
+			team_map.remove(name);
+            */
+            serialize();
+            }
+        // Send a confirmation to requester.
+		return response_to_client("Team " + name + " changed to " + new_name);
+	}
 	private Source doGet(MessageContext msg_ctx) {        
 		// Parse the query string.
 
@@ -90,9 +272,10 @@ public class RestfulTeams implements Provider<Source>
 
 			// Check if named team exists.
 			Team team = team_map.get(name);
-			if (team == null) 
+			if (team == null) {
+				response_to_client("Page Not Found");
 				throw new HTTPException(404); // not found
-
+			}
 			System.out.println("Team Name :: " +team.getName());
 
 			// Otherwise, generate XML and return.
@@ -121,6 +304,7 @@ public class RestfulTeams implements Provider<Source>
 	}
 
 
+	@SuppressWarnings("resource")
 	private void read_teams_from_file() {
 		try {
 			int len = (int) new File(file_path).length();
@@ -136,9 +320,9 @@ public class RestfulTeams implements Provider<Source>
 		// De Serialize the bytes into Teams
 
 		XMLDecoder dec = new XMLDecoder(new ByteArrayInputStream(team_bytes));
-		Teams teamsObj = (Teams) dec.readObject();
+		List<Team> teamsObj = (List<Team>) dec.readObject();
 
-		teams = teamsObj.getTeams();
+		teams = teamsObj;
 
 		// Create a map for quick lookups of teams.
 		team_map = Collections.synchronizedMap(new HashMap<String, Team>());
